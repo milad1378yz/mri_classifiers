@@ -232,5 +232,3 @@ if __name__ == '__main__':
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
     plt.savefig("results/validation_confusion_matrix.png")
-
-
