@@ -159,76 +159,59 @@ if __name__ == '__main__':
     print("Start")
     classes = [
         "NonDemented",
+        "VeryMildDemented",
         "MildDemented",
         "ModerateDemented",
-        "VeryMildDemented"
     ]
     data_path = os.path.join("data", "Alzheimer_MRI_4_classes_dataset")
     folder_dict = gather_data(classes, data_path)
     
-    balanced_folder_dict = augment_data(folder_dict)
+    augmentation = False
+    if augmentation:
+        balanced_folder_dict = augment_data(folder_dict)
 
-    print("augemented data is ready")
-    plot_augmentated_images(5)
-    print("plot done")
-    # convert to array
-    train_data, train_label, val_data, val_label = convert_to_array(balanced_folder_dict,classes)
+        print("augemented data is ready")
+        plot_augmentated_images(5)
+        print("plot done")
+        train_data, train_label, val_data, val_label = convert_to_array(balanced_folder_dict,classes)
+    else:
+        train_data, train_label, val_data, val_label = convert_to_array(folder_dict,classes)
+    
     print("train data and validation data is ready")
 
-    # trian SVM model for train data
-    from sklearn import svm
-    from sklearn.metrics import accuracy_score
-    from sklearn.metrics import classification_report
-    from sklearn.metrics import confusion_matrix
-    import seaborn as sns
-    import pandas as pd
-    import matplotlib.pyplot as plt
-    from sklearn.feature_selection import SelectKBest, f_classif
-
+    # convert labels to binary
+    convert_binary = False
+    if convert_binary:
+        train_label = np.where(train_label == 0, 0, 1)
+        val_label = np.where(val_label == 0, 0, 1)
+        print("convert binary done")
+        classes = ["NonDemented","Demented"]
+    
     # feature selection
-    print("feature selection")
-    k_best = SelectKBest(score_func=f_classif, k=16)
-    X_selected = k_best.fit(train_data, train_label)
-    X_selected = X_selected.transform(train_data)
-    print("feature selection done")
-    # train SVM model
-    clf = svm.SVC(kernel='linear')
-    clf.fit(X_selected, train_label)
-    # predict
-    predict_train = clf.predict(X_selected)
-    # accuracy
-    print("train accuracy: ", accuracy_score(train_label, predict_train))
-    # classification report
-    print("train classification report: \n", classification_report(train_label, predict_train))
-    # confusion matrix
-    cm = confusion_matrix(train_label, predict_train)
-    print("train confusion matrix: \n", cm)
-    # plot confusion matrix
-    df_cm = pd.DataFrame(cm, index=classes, columns=classes)
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(df_cm, annot=True, cmap='Blues', fmt='g')
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-    plt.savefig("results/train_confusion_matrix.png")
+    feature_selection = True
+    k = 1024
+    if feature_selection:
+        from feature_selector import FeatureSelector
+        feature_selector = FeatureSelector(k=k)
+        feature_selector.train(train_data, train_label)
+        train_data = feature_selector.transform(train_data)
+        val_data = feature_selector.transform(val_data)
+        print("feature selection done")
 
-    # validation
-    # feature selection
-    print("feature selection")
-    X_selected = k_best.transform(val_data)
-    print("feature selection done")
-    # predict
-    predict_val = clf.predict(X_selected)
-    # accuracy
-    print("validation accuracy: ", accuracy_score(val_label, predict_val))
-    # classification report
-    print("validation classification report: \n", classification_report(val_label, predict_val))
-    # confusion matrix
-    cm = confusion_matrix(val_label, predict_val)
-    print("validation confusion matrix: \n", cm)
-    # plot confusion matrix
-    df_cm = pd.DataFrame(cm, index=classes, columns=classes)
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(df_cm, annot=True, cmap='Blues', fmt='g')
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-    plt.savefig("results/validation_confusion_matrix.png")
+    # apply SVM
+    do_svm = True
+    if do_svm:
+        from classifiers.svm import SVMClassifier
+        svm_classifier = SVMClassifier(max_iter=10000)
+        svm_classifier.train(train_data, train_label, classes)
+        svm_classifier.val(val_data, val_label, classes)
+        print("svm done")
+
+    # apply KNN
+    do_knn = True
+    if do_knn:
+        from classifiers.knn import KNNClassifier
+        knn_classifier = KNNClassifier()
+        knn_classifier.train(train_data, train_label, classes)
+        knn_classifier.val(val_data, val_label, classes)
+        print("knn done")
