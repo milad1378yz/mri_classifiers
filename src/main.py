@@ -5,6 +5,8 @@ import numpy as np
 import random
 import copy
 
+from handlers.parser import parse_config
+
 data_show = {"Original":[],"Augmented":[]}
 
 def gather_data(classes, data_path):
@@ -140,6 +142,32 @@ def convert_to_array(folder_dict,classes):
     return train_data, train_label, val_data, val_label
 
 
+def convert_to_array_cnn(folder_dict,classes):
+    train_data = []
+    train_label = []
+    val_data = []
+    val_label = []
+    for class_index, class_name in enumerate(classes):
+        data = folder_dict[class_name]
+        random.shuffle(data)
+        num_train = int(len(data)*0.9)
+        for i in range(len(data)):
+            # each input's shape should be (1,208,176)
+            data_shown = np.array(data[i])
+            if i < num_train:
+                train_data.append(data_shown.reshape(1,data_shown.shape[0],data_shown.shape[1]))
+                train_label.append(class_index)
+            else:
+                val_data.append(data_shown.reshape(1,data_shown.shape[0],data_shown.shape[1]))
+                val_label.append(class_index)
+    train_data = np.array(train_data)
+    train_label = np.array(train_label)
+    val_data = np.array(val_data)
+    val_label = np.array(val_label)
+    return train_data, train_label, val_data, val_label
+    
+
+
 def plot_augmentated_images(num_images):
     fig, axes = plt.subplots(num_images, 2, figsize=(8, 10))
     plt.tight_layout()
@@ -157,61 +185,104 @@ def plot_augmentated_images(num_images):
     plt.savefig("results/augmented_images.png")
 if __name__ == '__main__':
     print("Start")
+    args = parse_config(r'configs\config.yaml')
     classes = [
         "NonDemented",
         "VeryMildDemented",
         "MildDemented",
         "ModerateDemented",
     ]
-    data_path = os.path.join("data", "Alzheimer_MRI_4_classes_dataset")
+    data_path = args.data_path
     folder_dict = gather_data(classes, data_path)
     
-    augmentation = False
-    if augmentation:
+    if args.do_augmentation:
+        print("start augmentation")
         balanced_folder_dict = augment_data(folder_dict)
-
         print("augemented data is ready")
         plot_augmentated_images(5)
-        print("plot done")
-        train_data, train_label, val_data, val_label = convert_to_array(balanced_folder_dict,classes)
+        print("plot augmentated image is done")
+        
+        if args.do_cnn:
+            train_data, train_label, val_data, val_label = convert_to_array_cnn(balanced_folder_dict,classes)
+        else:
+            train_data, train_label, val_data, val_label = convert_to_array(balanced_folder_dict,classes)
     else:
-        train_data, train_label, val_data, val_label = convert_to_array(folder_dict,classes)
+        if args.do_cnn:
+            train_data, train_label, val_data, val_label = convert_to_array_cnn(folder_dict,classes)
+        else:
+            train_data, train_label, val_data, val_label = convert_to_array(folder_dict,classes)
     
     print("train data and validation data is ready")
 
     # convert labels to binary
-    convert_binary = False
-    if convert_binary:
+    if args.convert_binary:
         train_label = np.where(train_label == 0, 0, 1)
         val_label = np.where(val_label == 0, 0, 1)
         print("convert binary done")
         classes = ["NonDemented","Demented"]
     
     # feature selection
-    feature_selection = True
-    k = 1024
-    if feature_selection:
+    if args.feature_selection and not args.do_cnn:
         from feature_selector import FeatureSelector
-        feature_selector = FeatureSelector(k=k)
+        print("start feature selection")
+        feature_selector = FeatureSelector(k=args.num_feature)
         feature_selector.train(train_data, train_label)
         train_data = feature_selector.transform(train_data)
         val_data = feature_selector.transform(val_data)
         print("feature selection done")
 
     # apply SVM
-    do_svm = True
-    if do_svm:
+    if args.do_svm:
         from classifiers.svm import SVMClassifier
-        svm_classifier = SVMClassifier(max_iter=10000)
+        print("start svm")
+        svm_classifier = SVMClassifier(max_iter=args.max_iter)
         svm_classifier.train(train_data, train_label, classes)
         svm_classifier.val(val_data, val_label, classes)
         print("svm done")
 
     # apply KNN
-    do_knn = True
-    if do_knn:
+    if args.do_knn:
         from classifiers.knn import KNNClassifier
-        knn_classifier = KNNClassifier()
+        print("start knn")
+        knn_classifier = KNNClassifier(n_neighbors = args.n_neighbors)
         knn_classifier.train(train_data, train_label, classes)
         knn_classifier.val(val_data, val_label, classes)
         print("knn done")
+
+    # apply random forest
+    if args.do_random_forest:
+        from classifiers.random_forest import RandomForest
+        print("start random forest")
+        random_forest_classifier = RandomForest(args.n_estimators, args.max_depth)
+        random_forest_classifier.train(train_data, train_label, classes)
+        random_forest_classifier.val(val_data, val_label, classes)
+        print("random forest done")
+
+    # apply MLP
+    if args.do_mlp:
+        from classifiers.mlp import MLP
+        print("start mlp")
+        mlp_classifier = MLP(hidden_layer_sizes=args.hidden_layer_sizes, activation=args.activation, learning_rate_init=args.learning_rate_init, validation_fraction=args.validation_fraction)
+        mlp_classifier.train(train_data, train_label, classes)
+        mlp_classifier.val(val_data, val_label, classes)
+        print("mlp done")
+    
+    # apply logistic regression
+    if args.do_logistic_regression:
+        from classifiers.logistic_regression import LogisticRegressionClassifier
+        print("start logistic regression")
+        logistic_regression_classifier = LogisticRegressionClassifier()
+        logistic_regression_classifier.train(train_data, train_label, classes)
+        logistic_regression_classifier.val(val_data, val_label, classes)
+        print("logistic regression done")
+
+    # apply CNN
+    if args.do_cnn:
+        from classifiers.cnn import CNNClassifier
+        print("start cnn")
+        print(train_data.shape)
+        cnn_classifier = CNNClassifier(input_shape=train_data.shape, num_classes=len(classes), learning_rate=args.learning_rate_cnn)
+        print("cnn classifier structure", cnn_classifier)
+        cnn_classifier.train(train_data, train_label, classes, batch_size=args.batch_size_cnn, epochs=args.num_epochs_cnn)
+        cnn_classifier.val(val_data, val_label, classes)
+        print("cnn done")

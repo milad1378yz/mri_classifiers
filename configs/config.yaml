@@ -1,0 +1,38 @@
+data_path: "data\\Alzheimer_MRI_4_classes_dataset"
+results_path: "results"
+do_augmentation: true
+convert_binary: false
+
+feature_selection: true
+num_feature: 1024
+
+do_svm: false
+max_iter: 10000
+
+do_knn: false
+n_neighbors: 5
+
+do_random_forest: false
+n_estimators: 100
+max_depth: none
+
+do_mlp: false
+hidden_layer_sizes:
+  - 100
+  - 100
+activation: "relu"
+learning_rate_init: 0.001
+validation_fraction: 0.1
+
+do_logistic_regression: false
+
+do_cnn: true
+num_epochs_cnn: 100
+batch_size_cnn: 32
+learning_rate_cnn: 0.001
+
+
+
+
+
+

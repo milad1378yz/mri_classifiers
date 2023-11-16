@@ -30,6 +30,10 @@ class SVMClassifier:
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.savefig("results/train_confusion_matrix_SVM.png")
+        # save the report
+        report = classification_report(train_label, predict_train, output_dict=True)
+        df = pd.DataFrame(report).transpose()
+        df.to_csv("results/train_classification_report_SVM.csv")
 
     def val(self, val_data, val_label, classes):
         # predict
@@ -48,6 +52,10 @@ class SVMClassifier:
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.savefig("results/validation_confusion_matrix_SVM.png")
+        # save the report
+        report = classification_report(val_label, predict_val, output_dict=True)
+        df = pd.DataFrame(report).transpose()
+        df.to_csv("results/validation_classification_report_SVM.csv")
 
     def get_model(self):
         return self.clf
