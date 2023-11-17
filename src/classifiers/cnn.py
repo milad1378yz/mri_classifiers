@@ -7,19 +7,21 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
+from torch.utils.data import Dataset, DataLoader
 
 import os
 
 class CNNClassifier(nn.Module):
     def __init__(self, input_shape, num_classes, learning_rate=0.001):
         super(CNNClassifier, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=input_shape[1], out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=input_shape[1], out_channels=16, kernel_size=3, stride=1, padding=1)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(in_features=64*52*44, out_features=128)
+        self.fc1 = nn.Linear(in_features=32*52*44, out_features=64)
         self.dropout = nn.Dropout(p=0.5)
-        self.fc2 = nn.Linear(in_features=128, out_features=num_classes)
+        self.fc2 = nn.Linear(in_features=64, out_features=num_classes)
+        self.fc3 = nn.Softmax(dim=1)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
 
@@ -30,21 +32,22 @@ class CNNClassifier(nn.Module):
         x = self.conv2(x)
         x = nn.functional.relu(x)
         x = self.pool2(x)
-        x = x.view(-1, 64*52*44)
+        x = x.view(-1, 32*52*44)
         x = self.fc1(x)
         x = nn.functional.relu(x)
         x = self.dropout(x)
         x = self.fc2(x)
+        x = self.fc3(x)
         return x
 
     def train(self, train_data, train_label, classes, batch_size=32, epochs=10):
         # train CNN model
-        print(train_data.shape, train_label.shape)
-        train_dataset = torch.utils.data.TensorDataset(train_data, train_label)
+        train_dataset = CustomDataset(train_data, train_label)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         self.history = []
         for epoch in range(epochs):
             running_loss = 0.0
+            print("epoch: ", epoch)
             for i, data in enumerate(train_loader, 0):
                 inputs, labels = data
                 self.optimizer.zero_grad()
@@ -102,3 +105,15 @@ class CNNClassifier(nn.Module):
 
     def get_model(self):
         return self
+    
+
+class CustomDataset(Dataset):
+    def __init__(self, data, labels):
+        self.data = torch.from_numpy(data).float()
+        self.labels = nn.functional.one_hot(torch.from_numpy(labels).long()).float()
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx], self.labels[idx]
