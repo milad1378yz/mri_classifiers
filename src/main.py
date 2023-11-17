@@ -6,7 +6,7 @@ import random
 import copy
 
 from handlers.parser import parse_config
-from augmentation import augment_data, plot_augmentated_images
+from handlers.augmentation import augment_data, plot_augmentated_images
 
 def gather_data(classes, data_path):
     folder_dict = {}
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     
     # feature selection
     if args.feature_selection and not args.do_cnn:
-        from feature_selector import FeatureSelector
+        from handlers.feature_selector import FeatureSelector
         print("start feature selection")
         feature_selector = FeatureSelector(k=args.num_feature)
         feature_selector.train(train_data, train_label)
@@ -209,6 +209,7 @@ if __name__ == '__main__':
         from classifiers.cnn import CNNClassifier
         print("start cnn")
         cnn_classifier = CNNClassifier(input_shape=train_data.shape, num_classes=len(classes), learning_rate=args.learning_rate_cnn)
-        cnn_classifier.train(train_data, train_label, classes, batch_size=args.batch_size_cnn, epochs=args.num_epochs_cnn)
-        cnn_classifier.val(val_data, val_label, classes)
+        cnn_classifier.trainer(train_data, train_label, classes, batch_size=args.batch_size_cnn, epochs=args.num_epochs_cnn)
+        cnn_classifier.vali(val_data, val_label, classes)
         print("cnn done")
+

@@ -27,7 +27,7 @@ validation_fraction: 0.1
 do_logistic_regression: false
 
 do_cnn: true
-num_epochs_cnn: 100
+num_epochs_cnn: 1
 batch_size_cnn: 32
 learning_rate_cnn: 0.001
 

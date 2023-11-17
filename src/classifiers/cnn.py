@@ -8,11 +8,12 @@ import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
+from typing import Tuple
 
-import os
+
 
 class CNNClassifier(nn.Module):
-    def __init__(self, input_shape, num_classes, learning_rate=0.001):
+    def __init__(self, input_shape: Tuple[int, int, int], num_classes: int, learning_rate: float = 0.001):
         super(CNNClassifier, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=input_shape[1], out_channels=16, kernel_size=3, stride=1, padding=1)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -40,7 +41,7 @@ class CNNClassifier(nn.Module):
         x = self.fc3(x)
         return x
 
-    def train(self, train_data, train_label, classes, batch_size=32, epochs=10):
+    def trainer(self, train_data, train_label, classes, batch_size=32, epochs=10):
         # train CNN model
         train_dataset = CustomDataset(train_data, train_label)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -48,7 +49,7 @@ class CNNClassifier(nn.Module):
         for epoch in range(epochs):
             running_loss = 0.0
             print("epoch: ", epoch)
-            for i, data in enumerate(train_loader, 0):
+            for data in train_loader:
                 inputs, labels = data
                 self.optimizer.zero_grad()
                 outputs = self(inputs)
@@ -58,7 +59,7 @@ class CNNClassifier(nn.Module):
                 running_loss += loss.item()
             self.history.append(running_loss / len(train_loader))
         # predict
-        predict_train = self.predict(train_data)
+        predict_train = self.my_predict(train_data,train_label)
         # classification report
         print("train classification report: \n", classification_report(train_label, predict_train, target_names=classes))
         # confusion matrix
@@ -76,9 +77,9 @@ class CNNClassifier(nn.Module):
         df = pd.DataFrame(report).transpose()
         df.to_csv("results/train_classification_report_cnn.csv")
 
-    def val(self, val_data, val_label, classes):
+    def vali(self, val_data, val_label, classes):
         # predict
-        predict_val = self.predict(val_data)
+        predict_val = self.my_predict(val_data,val_label)
         # classification report
         print("validation classification report: \n", classification_report(val_label, predict_val, target_names=classes))
         # confusion matrix
@@ -96,11 +97,15 @@ class CNNClassifier(nn.Module):
         df = pd.DataFrame(report).transpose()
         df.to_csv("results/validation_classification_report_cnn.csv")
 
-    def predict(self, data):
+    def my_predict(self, data,labels):
         self.eval()
+        dataset = CustomDataset(data, labels)
+        loader = DataLoader(dataset, batch_size=32, shuffle=True)
         with torch.no_grad():
-            outputs = self(data)
-            _, predicted = torch.max(outputs.data, 1)
+            for iter in loader:
+                inputs, labels = iter
+                outputs = self(inputs)
+                _, predicted = torch.max(outputs.data, 1)
         return predicted
 
     def get_model(self):
@@ -117,3 +122,4 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.data[idx], self.labels[idx]
+                
