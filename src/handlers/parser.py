@@ -53,6 +53,7 @@ def parse_config(config_file:str)->argparse.Namespace:
     parser.add_argument('--do_ensemble_adaboost', type=bool, default= config["do_ensemble_adaboost"], help='do_ensemble_adaboost')
 
     parser.add_argument('--do_decision_tree', type=bool, default= config["do_decision_tree"], help='do_decision_tree')
+    parser.add_argument('--max_depth_decision_tree', type=int, default=config["max_depth_decision_tree"], help='max_depth_decision_tree')
 
     parser.add_argument('--do_naive_bayes', type=bool, default= config["do_naive_bayes"], help='do_naive_bayes')
 

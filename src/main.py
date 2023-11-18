@@ -226,7 +226,7 @@ if __name__ == '__main__':
     if args.do_decision_tree:
         from classifiers.decision_tree import DecisionTree
         print("start decision tree")
-        decision_tree_classifier = DecisionTree()
+        decision_tree_classifier = DecisionTree(args.max_depth_decision_tree)
         decision_tree_classifier.train(train_data, train_label, classes)
         decision_tree_classifier.val(val_data, val_label, classes)
         print("decision tree done")

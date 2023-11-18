@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import os
 
 class DecisionTree:
-    def __init__(self):
-        self.clf = DecisionTreeClassifier(max_features="auto")
+    def __init__(self,max_depth=16):
+        self.clf = DecisionTreeClassifier(max_features="auto",max_depth=max_depth)
 
     def train(self, train_data, train_label, classes):
         # train Decision Tree classifier

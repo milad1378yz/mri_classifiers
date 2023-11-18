@@ -31,12 +31,12 @@ num_epochs_cnn: 16
 batch_size_cnn: 32
 learning_rate_cnn: 0.001
 
-do_ensemble_adaboost: true
+do_ensemble_adaboost: false
 
 do_decision_tree: true
-max_depth_decision_tree: 100
+max_depth_decision_tree: 16
 
-do_naive_bayes: true
+do_naive_bayes: false
 
 
 
