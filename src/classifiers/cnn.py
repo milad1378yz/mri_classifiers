@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from typing import Tuple
-
+import numpy as np
 
 
 class CNNClassifier(nn.Module):
@@ -22,7 +22,7 @@ class CNNClassifier(nn.Module):
         self.fc1 = nn.Linear(in_features=32*52*44, out_features=64)
         self.dropout = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(in_features=64, out_features=num_classes)
-        self.fc3 = nn.Softmax(dim=1)
+        # self.fc3 = nn.Softmax(dim=1)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
 
@@ -38,7 +38,7 @@ class CNNClassifier(nn.Module):
         x = nn.functional.relu(x)
         x = self.dropout(x)
         x = self.fc2(x)
-        x = self.fc3(x)
+        # x = self.fc3(x)
         return x
 
     def trainer(self, train_data, train_label, classes, batch_size=32, epochs=10):
@@ -58,6 +58,9 @@ class CNNClassifier(nn.Module):
                 self.optimizer.step()
                 running_loss += loss.item()
             self.history.append(running_loss / len(train_loader))
+            # print statistics
+            print("loss: ", running_loss / len(train_loader))
+            # print("train accuracy: ", self.my_predict(train_data,train_label).mean())
         # predict
         predict_train = self.my_predict(train_data,train_label)
         # classification report
@@ -101,12 +104,15 @@ class CNNClassifier(nn.Module):
         self.eval()
         dataset = CustomDataset(data, labels)
         loader = DataLoader(dataset, batch_size=32, shuffle=True)
+        out_predicted = []
         with torch.no_grad():
             for iter in loader:
                 inputs, labels = iter
                 outputs = self(inputs)
                 _, predicted = torch.max(outputs.data, 1)
-        return predicted
+                out_predicted += predicted.tolist()
+        print(len(out_predicted))
+        return np.array(out_predicted)
 
     def get_model(self):
         return self

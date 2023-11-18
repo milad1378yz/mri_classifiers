@@ -50,7 +50,12 @@ def parse_config(config_file:str)->argparse.Namespace:
     parser.add_argument('--num_epochs_cnn', type=int, default=config["num_epochs_cnn"], help='num_epochs_cnn')
     parser.add_argument('--learning_rate_cnn', type=float, default=config["learning_rate_cnn"], help='learning_rate of cnn')
 
-    # check if validation_fraction is between 0 and 1
+    parser.add_argument('--do_ensemble_adaboost', type=bool, default= config["do_ensemble_adaboost"], help='do_ensemble_adaboost')
+
+    parser.add_argument('--do_decision_tree', type=bool, default= config["do_decision_tree"], help='do_decision_tree')
+
+    parser.add_argument('--do_naive_bayes', type=bool, default= config["do_naive_bayes"], help='do_naive_bayes')
+
 
     
     # Parse the command-line arguments
@@ -65,8 +70,8 @@ def args_checker(args):
 
     # check that just cnn is true and no other classifier is true or cnn is false and at least one other classifier is true
     if args.do_cnn:
-        assert not any([args.do_svm, args.do_knn, args.do_random_forest, args.do_mlp, args.do_logistic_regression]), "Only one classifier can be selected at a time when do_cnn is true"
+        assert not any([args.do_svm, args.do_knn, args.do_random_forest, args.do_mlp, args.do_logistic_regression, args.do_ensemble_adaboost, args.do_decision_tree, args.do_naive_bayes]), "Only one classifier can be selected at a time when do_cnn is true"
     else:
-        assert any([args.do_svm, args.do_knn, args.do_random_forest, args.do_mlp, args.do_logistic_regression]), "At least one classifier should be selected"
+        assert any([args.do_svm, args.do_knn, args.do_random_forest, args.do_mlp, args.do_logistic_regression, args.do_ensemble_adaboost, args.do_decision_tree, args.do_naive_bayes]), "At least one classifier should be selected"
 
 

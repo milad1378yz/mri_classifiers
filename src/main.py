@@ -213,3 +213,30 @@ if __name__ == '__main__':
         cnn_classifier.vali(val_data, val_label, classes)
         print("cnn done")
 
+    # apply ensemble AdaBoost
+    if args.do_ensemble_adaboost:
+        from classifiers.adaboost import AdaBoost
+        print("start ensemble AdaBoost")
+        ensemble_adaboost_classifier = AdaBoost()
+        ensemble_adaboost_classifier.train(train_data, train_label, classes)
+        ensemble_adaboost_classifier.val(val_data, val_label, classes)
+        print("ensemble AdaBoost done")
+
+    # apply decision tree
+    if args.do_decision_tree:
+        from classifiers.decision_tree import DecisionTree
+        print("start decision tree")
+        decision_tree_classifier = DecisionTree()
+        decision_tree_classifier.train(train_data, train_label, classes)
+        decision_tree_classifier.val(val_data, val_label, classes)
+        print("decision tree done")
+
+    # apply naive bayes
+    if args.do_naive_bayes:
+        from classifiers.naive_bayes import NaiveBayes_Classifier
+        print("start naive bayes")
+        naive_bayes_classifier = NaiveBayes_Classifier()
+        naive_bayes_classifier.train(train_data, train_label, classes)
+        naive_bayes_classifier.val(val_data, val_label, classes)
+        print("naive bayes done")
+
