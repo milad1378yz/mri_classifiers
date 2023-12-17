@@ -1,14 +1,26 @@
 import os
-import matplotlib.pyplot as plt
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image
 import numpy as np
 import random
-import copy
 
 from handlers.parser import parse_config
 from handlers.augmentation import augment_data, plot_augmentated_images
+from handlers.augmentation import generate_data
 
-def gather_data(classes, data_path):
+
+
+def gather_data(classes: list, data_path: str, do_cnn: bool) -> dict:
+    """
+    Gather data from the specified data path for each class.
+
+    Args:
+        classes (list): List of class names.
+        data_path (str): Path to the data folder.
+        do_cnn (bool): Flag indicating whether to convert images to RGB for CNN.
+
+    Returns:
+        dict: A dictionary containing the class names as keys and a list of images as values.
+    """
     folder_dict = {}
     
     for i, class_mri in enumerate(classes):
@@ -23,9 +35,13 @@ def gather_data(classes, data_path):
         
         for file in jpg_files:
             image_path = os.path.join(data_path, class_mri, file)
-            image = Image.open(image_path)
+            if do_cnn:
+                image = Image.open(image_path).convert('RGB')
+                folder_dict[class_mri].append(image)  # Add original image
+            else:
+                image = Image.open(image_path)
+                folder_dict[class_mri].append(np.array(image))  # Add original image
             
-            folder_dict[class_mri].append(np.array(image))  # Add original image
             
     return folder_dict
 
@@ -54,6 +70,7 @@ def convert_to_array(folder_dict,classes):
         for image in train_dict[class_mri]:
             train_data.append(image)
             train_label.append(i)
+            
     train_data = np.array(train_data)
     train_label = np.array(train_label)
 
@@ -81,39 +98,50 @@ def convert_to_array(folder_dict,classes):
     val_data = combined_data_val[:, :-1]
     val_label = combined_data_val[:, -1]
 
+    print("data_train shape is:",train_data.shape)
+    print("data_val shape is:",val_data.shape)
+    print("label_train shape is:",train_label.shape)
+    print("label_val shape is:",val_label.shape)
     return train_data, train_label, val_data, val_label
 
 
-def convert_to_array_cnn(folder_dict,classes):
+
+def convert_to_array_cnn(folder_dict: dict, classes: list) -> tuple:
+    """
+    Convert the data in folder_dict to arrays for CNN training.
+
+    Args:
+        folder_dict (dict): A dictionary containing the data for each class. 
+                            Each class should have its data as a list of images,
+                            where each image is a numpy array of shape (height, width, channels).
+        classes (list): A list of class names.
+
+    Returns:
+        tuple: A tuple containing the train_data, train_label, val_data, and val_label arrays.
+    """
     train_data = []
     train_label = []
     val_data = []
     val_label = []
+
     for class_index, class_name in enumerate(classes):
         data = folder_dict[class_name]
         random.shuffle(data)
-        num_train = int(len(data)*0.9)
-        for i in range(len(data)):
-            # each input's shape should be (1,208,176)
-            data_shown = np.array(data[i])
+        num_train = int(len(data) * 0.9)
+
+        for i, data_shown in enumerate(data):
+
             if i < num_train:
-                train_data.append(data_shown.reshape(1,data_shown.shape[0],data_shown.shape[1]))
+                train_data.append(data_shown)
                 train_label.append(class_index)
             else:
-                val_data.append(data_shown.reshape(1,data_shown.shape[0],data_shown.shape[1]))
+                val_data.append(data_shown)
                 val_label.append(class_index)
-    train_data = np.array(train_data)
-    train_label = np.array(train_label)
-    val_data = np.array(val_data)
-    val_label = np.array(val_label)
+
     return train_data, train_label, val_data, val_label
     
-
-
-
-if __name__ == '__main__':
-    print("Start")
-    args = parse_config(r'configs\config.yaml')
+def main(args):
+    
     classes = [
         "NonDemented",
         "VeryMildDemented",
@@ -121,14 +149,22 @@ if __name__ == '__main__':
         "ModerateDemented",
     ]
     data_path = args.data_path
-    folder_dict = gather_data(classes, data_path)
-    
+    print("gather data")
+    folder_dict = gather_data(classes, data_path, args.do_cnn)
+    print("gather data done")
+    # shapes = folder_dict[list(folder_dict.keys())[0]][0].shape
+    # print(shapes)
     if args.do_augmentation:
         print("start augmentation")
-        balanced_folder_dict = augment_data(folder_dict)
-        print("augemented data is ready")
-        plot_augmentated_images(5)
-        print("plot augmentated image is done")
+        if args.do_generation:
+            print("start generation")
+            balanced_folder_dict = generate_data(folder_dict,5000,args.do_cnn)
+            print("generation done")
+        else:
+            balanced_folder_dict = augment_data(folder_dict,args.do_cnn)
+            print("augemented data is ready")
+            plot_augmentated_images(5)
+            print("plot augmentated image is done")
         
         if args.do_cnn:
             train_data, train_label, val_data, val_label = convert_to_array_cnn(balanced_folder_dict,classes)
@@ -208,8 +244,8 @@ if __name__ == '__main__':
     if args.do_cnn:
         from classifiers.cnn import CNNClassifier
         print("start cnn")
-        cnn_classifier = CNNClassifier(input_shape=train_data.shape, num_classes=len(classes), learning_rate=args.learning_rate_cnn)
-        cnn_classifier.trainer(train_data, train_label, classes, batch_size=args.batch_size_cnn, epochs=args.num_epochs_cnn)
+        cnn_classifier = CNNClassifier( num_classes=len(classes), learning_rate=args.learning_rate_cnn)
+        cnn_classifier.trainer(train_data, train_label,val_data,val_label, classes, batch_size=args.batch_size_cnn, epochs=args.num_epochs_cnn)
         cnn_classifier.vali(val_data, val_label, classes)
         print("cnn done")
 
@@ -240,3 +276,16 @@ if __name__ == '__main__':
         naive_bayes_classifier.val(val_data, val_label, classes)
         print("naive bayes done")
 
+    # apply vision transformer
+    if args.do_vit:
+        from classifiers.vit import VisionTransformerClassifier
+        print("start vision transformer")
+        vit_classifier = VisionTransformerClassifier(num_classes=len(classes), learning_rate=args.learning_rate_cnn)
+        vit_classifier.trainer(train_data, train_label,val_data,val_label, classes, batch_size=args.batch_size_cnn, epochs=args.num_epochs_cnn)
+        vit_classifier.vali(val_data, val_label, classes)
+        print("vision transformer done")
+
+if __name__ == '__main__':
+    print("Start")
+    args = parse_config(r'configs/config.yaml')
+    main(args)

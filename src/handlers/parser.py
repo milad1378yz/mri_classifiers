@@ -22,6 +22,8 @@ def parse_config(config_file:str)->argparse.Namespace:
     parser.add_argument('--results_path', type=str,default=config["results_path"], help='path for the resluts')
 
     parser.add_argument('--do_augmentation', type=bool, default= config["do_augmentation"], help='do_augmentation')
+    parser.add_argument('--do_generation', type=bool, default= config["do_generation"], help='do_generation using diffusion models')
+
     parser.add_argument('--convert_binary', type=bool, default= config["convert_binary"], help='converts labels to binary')
     
     parser.add_argument('--feature_selection', type=bool, default= config["feature_selection"], help='feature_selection')
@@ -58,6 +60,8 @@ def parse_config(config_file:str)->argparse.Namespace:
     parser.add_argument('--do_naive_bayes', type=bool, default= config["do_naive_bayes"], help='do_naive_bayes')
 
 
+    parser.add_argument('--do_vit', type=bool, default= config["do_vit"], help='do_vit')
+
     
     # Parse the command-line arguments
     args, _ = parser.parse_known_args()
@@ -70,8 +74,8 @@ def args_checker(args):
     assert args.validation_fraction >= 0 and args.validation_fraction <= 1, "validation_fraction should be between 0 and 1"
 
     # check that just cnn is true and no other classifier is true or cnn is false and at least one other classifier is true
-    if args.do_cnn:
-        assert not any([args.do_svm, args.do_knn, args.do_random_forest, args.do_mlp, args.do_logistic_regression, args.do_ensemble_adaboost, args.do_decision_tree, args.do_naive_bayes]), "Only one classifier can be selected at a time when do_cnn is true"
+    if args.do_cnn or args.do_vit:
+        assert not any([args.do_svm, args.do_knn, args.do_random_forest, args.do_mlp, args.do_logistic_regression, args.do_ensemble_adaboost, args.do_decision_tree, args.do_naive_bayes]), "Only one classifier can be selected at a time when do_cnn do_vit is true"
     else:
         assert any([args.do_svm, args.do_knn, args.do_random_forest, args.do_mlp, args.do_logistic_regression, args.do_ensemble_adaboost, args.do_decision_tree, args.do_naive_bayes]), "At least one classifier should be selected"
 
