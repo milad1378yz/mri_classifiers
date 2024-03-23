@@ -8,9 +8,12 @@ parser.add_argument("--num_epochs", type=int, default=100, help="Number of epoch
 args = parser.parse_args()
 
 class_MRI = args.class_MRI
-dataset = load_dataset("./", data_dir="./data/Alzheimer_MRI_4_classes_dataset/"+class_MRI,split="train")
+dataset = load_dataset(
+    "./", data_dir="./data/Alzheimer_MRI_4_classes_dataset/" + class_MRI, split="train"
+)
 print(dataset)
 from dataclasses import dataclass
+
 
 @dataclass
 class TrainingConfig:
@@ -24,7 +27,9 @@ class TrainingConfig:
     save_image_epochs = 10
     save_model_epochs = 30
     mixed_precision = "fp16"  # `no` for float32, `fp16` for automatic mixed precision
-    output_dir = "../diffiusion_models/"+class_MRI   # the model name locally and on the HF Hub
+    output_dir = (
+        "../diffiusion_models/" + class_MRI
+    )  # the model name locally and on the HF Hub
 
     push_to_hub = False  # whether to upload the saved model to the HF Hub
     # hub_model_id = "<your-username>/<my-awesome-model>"  # the name of the repository to create on the HF Hub
@@ -46,6 +51,8 @@ preprocess = transforms.Compose(
         transforms.Normalize([0.5], [0.5]),
     ]
 )
+
+
 def transform(examples):
     images = [preprocess(image.convert("L")) for image in examples["image"]]
     return {"images": images}
@@ -56,7 +63,9 @@ dataset.set_transform(transform)
 
 import torch
 
-train_dataloader = torch.utils.data.DataLoader(dataset, batch_size=config.train_batch_size, shuffle=True)
+train_dataloader = torch.utils.data.DataLoader(
+    dataset, batch_size=config.train_batch_size, shuffle=True
+)
 
 from diffusers import UNet2DModel
 
@@ -65,7 +74,14 @@ model = UNet2DModel(
     in_channels=1,  # the number of input channels, 3 for RGB images
     out_channels=1,  # the number of output channels
     layers_per_block=2,  # how many ResNet layers to use per UNet block
-    block_out_channels=(128, 128, 256, 256, 512, 512),  # the number of output channels for each UNet block
+    block_out_channels=(
+        128,
+        128,
+        256,
+        256,
+        512,
+        512,
+    ),  # the number of output channels for each UNet block
     down_block_types=(
         "DownBlock2D",  # a regular ResNet downsampling block
         "DownBlock2D",
@@ -84,7 +100,7 @@ model = UNet2DModel(
     ),
 )
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = "cuda" if torch.cuda.is_available() else "cpu"
 model = model.to(device)
 
 sample_image = dataset[0]["images"].unsqueeze(0).to(device)
@@ -127,6 +143,7 @@ from diffusers import DDPMPipeline
 from diffusers.utils import make_image_grid
 import os
 
+
 def evaluate(config, epoch, pipeline):
     # Sample some images from random noise (this is the backward diffusion process).
     # The default pipeline output type is `List[PIL.Image]`
@@ -143,13 +160,17 @@ def evaluate(config, epoch, pipeline):
     os.makedirs(test_dir, exist_ok=True)
     image_grid.save(f"{test_dir}/{epoch:04d}.png")
 
+
 from accelerate import Accelerator
 from huggingface_hub import create_repo, upload_folder
 from tqdm.auto import tqdm
 from pathlib import Path
 import os
 
-def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_scheduler):
+
+def train_loop(
+    config, model, noise_scheduler, optimizer, train_dataloader, lr_scheduler
+):
     # Initialize accelerator and tensorboard logging
     accelerator = Accelerator(
         mixed_precision=config.mixed_precision,
@@ -162,7 +183,8 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
             os.makedirs(config.output_dir, exist_ok=True)
         if config.push_to_hub:
             repo_id = create_repo(
-                repo_id=config.hub_model_id or Path(config.output_dir).name, exist_ok=True
+                repo_id=config.hub_model_id or Path(config.output_dir).name,
+                exist_ok=True,
             ).repo_id
         accelerator.init_trackers("train_example")
 
@@ -177,19 +199,24 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
 
     # Now you train the model
     for epoch in range(config.num_epochs):
-        progress_bar = tqdm(total=len(train_dataloader), disable=not accelerator.is_local_main_process)
+        progress_bar = tqdm(
+            total=len(train_dataloader), disable=not accelerator.is_local_main_process
+        )
         progress_bar.set_description(f"Epoch {epoch}")
 
         for step, batch in enumerate(train_dataloader):
             clean_images = batch["images"]
-            #clean_images.to(device)
+            # clean_images.to(device)
             # Sample noise to add to the images
             noise = torch.randn(clean_images.shape).to(clean_images.device)
             bs = clean_images.shape[0]
 
             # Sample a random timestep for each image
             timesteps = torch.randint(
-                0, noise_scheduler.config.num_train_timesteps, (bs,), device=clean_images.device
+                0,
+                noise_scheduler.config.num_train_timesteps,
+                (bs,),
+                device=clean_images.device,
             ).long()
 
             # Add noise to the clean images according to the noise magnitude at each timestep
@@ -208,19 +235,29 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
                 optimizer.zero_grad()
 
             progress_bar.update(1)
-            logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0], "step": global_step}
+            logs = {
+                "loss": loss.detach().item(),
+                "lr": lr_scheduler.get_last_lr()[0],
+                "step": global_step,
+            }
             progress_bar.set_postfix(**logs)
             accelerator.log(logs, step=global_step)
             global_step += 1
 
         # After each epoch you optionally sample some demo images with evaluate() and save the model
         if accelerator.is_main_process:
-            pipeline = DDPMPipeline(unet=accelerator.unwrap_model(model), scheduler=noise_scheduler)
+            pipeline = DDPMPipeline(
+                unet=accelerator.unwrap_model(model), scheduler=noise_scheduler
+            )
 
-            if (epoch + 1) % config.save_image_epochs == 0 or epoch == config.num_epochs - 1:
+            if (
+                epoch + 1
+            ) % config.save_image_epochs == 0 or epoch == config.num_epochs - 1:
                 evaluate(config, epoch, pipeline)
 
-            if (epoch + 1) % config.save_model_epochs == 0 or epoch == config.num_epochs - 1:
+            if (
+                epoch + 1
+            ) % config.save_model_epochs == 0 or epoch == config.num_epochs - 1:
                 if config.push_to_hub:
                     upload_folder(
                         repo_id=repo_id,
@@ -232,6 +269,4 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
                     pipeline.save_pretrained(config.output_dir)
 
 
-
 train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_scheduler)
-

@@ -1,5 +1,5 @@
 data_path: "data/Alzheimer_MRI_4_classes_dataset"
-results_path: "results"
+results_path: "results/"
 
 do_augmentation: true
 do_generation: true

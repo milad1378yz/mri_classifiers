@@ -8,11 +8,12 @@ import matplotlib.pyplot as plt
 
 import os
 
+
 class AdaBoost:
     def __init__(self):
         self.clf = AdaBoostClassifier()
 
-    def train(self, train_data, train_label,classes):
+    def train(self, train_data, train_label, classes):
         # train AdaBoost classifier
         self.clf.fit(train_data, train_label)
         # predict
@@ -20,14 +21,17 @@ class AdaBoost:
         # accuracy
         print("train accuracy: ", accuracy_score(train_label, predict_train))
         # classification report
-        print("train classification report: \n", classification_report(train_label, predict_train))
+        print(
+            "train classification report: \n",
+            classification_report(train_label, predict_train),
+        )
         # confusion matrix
         cm = confusion_matrix(train_label, predict_train)
         print("train confusion matrix: \n", cm)
         # plot confusion matrix
         df_cm = pd.DataFrame(cm, index=classes, columns=classes)
         plt.figure(figsize=(10, 7))
-        sns.heatmap(df_cm, annot=True, cmap='Blues', fmt='g')
+        sns.heatmap(df_cm, annot=True, cmap="Blues", fmt="g")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.savefig("results/train_confusion_matrix_adaboost.png")
@@ -36,21 +40,23 @@ class AdaBoost:
         df = pd.DataFrame(report).transpose()
         df.to_csv("results/train_classification_report_adaboost.csv")
 
-
-    def val(self, val_data, val_label,classes):
+    def val(self, val_data, val_label, classes):
         # predict
         predict_val = self.clf.predict(val_data)
         # accuracy
         print("validation accuracy: ", accuracy_score(val_label, predict_val))
         # classification report
-        print("validation classification report: \n", classification_report(val_label, predict_val))
+        print(
+            "validation classification report: \n",
+            classification_report(val_label, predict_val),
+        )
         # confusion matrix
         cm = confusion_matrix(val_label, predict_val)
         print("validation confusion matrix: \n", cm)
         # plot confusion matrix
         df_cm = pd.DataFrame(cm, index=classes, columns=classes)
         plt.figure(figsize=(10, 7))
-        sns.heatmap(df_cm, annot=True, cmap='Blues', fmt='g')
+        sns.heatmap(df_cm, annot=True, cmap="Blues", fmt="g")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.savefig("results/validation_confusion_matrix_adaboost.png")

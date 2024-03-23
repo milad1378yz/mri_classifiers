@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 import os
 
+
 class NaiveBayes_Classifier:
     def __init__(self):
         self.clf = GaussianNB()
@@ -20,14 +21,17 @@ class NaiveBayes_Classifier:
         # accuracy
         print("train accuracy : ", accuracy_score(train_label, predict_train))
         # classification report
-        print("train classification report : \n", classification_report(train_label, predict_train))
+        print(
+            "train classification report : \n",
+            classification_report(train_label, predict_train),
+        )
         # confusion matrix
         cm = confusion_matrix(train_label, predict_train)
         print("train confusion matrix : \n", cm)
         # plot confusion matrix
         df_cm = pd.DataFrame(cm, index=classes, columns=classes)
         plt.figure(figsize=(10, 7))
-        sns.heatmap(df_cm, annot=True, cmap='Blues', fmt='g')
+        sns.heatmap(df_cm, annot=True, cmap="Blues", fmt="g")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.savefig("results/train_confusion_matrix_naive_bayes.png")
@@ -40,16 +44,22 @@ class NaiveBayes_Classifier:
         # predict
         predict_val = self.clf.predict(val_data)
         # accuracy
-        print("validation accuracy (Naive Bayes): ", accuracy_score(val_label, predict_val))
+        print(
+            "validation accuracy (Naive Bayes): ",
+            accuracy_score(val_label, predict_val),
+        )
         # classification report
-        print("validation classification report (Naive Bayes): \n", classification_report(val_label, predict_val))
+        print(
+            "validation classification report (Naive Bayes): \n",
+            classification_report(val_label, predict_val),
+        )
         # confusion matrix
         cm = confusion_matrix(val_label, predict_val)
         print("validation confusion matrix (Naive Bayes): \n", cm)
         # plot confusion matrix
         df_cm = pd.DataFrame(cm, index=classes, columns=classes)
         plt.figure(figsize=(10, 7))
-        sns.heatmap(df_cm, annot=True, cmap='Blues', fmt='g')
+        sns.heatmap(df_cm, annot=True, cmap="Blues", fmt="g")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.savefig("results/validation_confusion_matrix_naive_bayes.png")
