@@ -1,8 +1,3 @@
-,precision,recall,f1-score,support
-NonDemented,0.0,0.0,0.0,2880.0
-VeryMildDemented,0.25,1.0,0.4,2880.0
-MildDemented,0.0,0.0,0.0,2880.0
-ModerateDemented,0.0,0.0,0.0,2880.0
-accuracy,0.25,0.25,0.25,0.25
-macro avg,0.0625,0.25,0.1,11520.0
-weighted avg,0.0625,0.25,0.1,11520.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:d016ddfe9c0f138df0215778e266f5529aafc94ab807764fd6f1cccbc0f6b8a1
+size 279

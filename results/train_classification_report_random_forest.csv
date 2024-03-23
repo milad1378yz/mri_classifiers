@@ -1,8 +1,3 @@
-,precision,recall,f1-score,support
-0,1.0,1.0,1.0,2880.0
-1,1.0,1.0,1.0,2880.0
-2,1.0,1.0,1.0,2880.0
-3,1.0,1.0,1.0,2880.0
-accuracy,1.0,1.0,1.0,1.0
-macro avg,1.0,1.0,1.0,11520.0
-weighted avg,1.0,1.0,1.0,11520.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:3ece2664d816e8610aae4f6c177773342683b997666b3da1dc65bbc60fd5efab
+size 215
