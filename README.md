@@ -8,6 +8,7 @@ To set up the environment, open CMD in Windows or Terminal in Linux, and execute
 ```bash
 pip install -r requirements.txt
 ```
+Also for data files you need to install 'git LFS'.
 
 ## Data Augmentation Using Diffusion Models
 
