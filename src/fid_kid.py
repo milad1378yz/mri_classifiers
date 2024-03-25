@@ -10,7 +10,7 @@ from torchmetrics.image.kid import KernelInceptionDistance
 from typing import Tuple
 
 
-def parse_command_line_arguments() -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Calculate FID and KID metrics for images."
     )
@@ -79,8 +79,7 @@ def compute_image_metrics(
     return fid_score, (kid_mean, kid_std)
 
 
-def main():
-    args = parse_command_line_arguments()
+def main(args: argparse.Namespace):
 
     random.seed(0)  # Ensure reproducibility
 
@@ -99,4 +98,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args)
