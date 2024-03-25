@@ -9,7 +9,10 @@ from typing import Dict, List, Tuple, Union
 # Global variable to store original and augmented image pairs for visualization
 data_show: Dict[str, List[np.ndarray]] = {"Original": [], "Augmented": []}
 
-def augment_data(folder_dict: Dict[str, List[np.ndarray]], do_cnn: bool) -> Dict[str, List[Union[Image.Image, np.ndarray]]]:
+
+def augment_data(
+    folder_dict: Dict[str, List[np.ndarray]], do_cnn: bool
+) -> Dict[str, List[Union[Image.Image, np.ndarray]]]:
     """
     Augments image data for each class to balance the dataset.
 
@@ -53,6 +56,7 @@ def augment_data(folder_dict: Dict[str, List[np.ndarray]], do_cnn: bool) -> Dict
 
     return augmented_folder_dict
 
+
 def random_erasing(image: Image.Image) -> Image.Image:
     """
     Applies random erasing to an image.
@@ -74,6 +78,7 @@ def random_erasing(image: Image.Image) -> Image.Image:
 
     return erased_image
 
+
 def sharpening(image: Image.Image) -> Image.Image:
     """
     Sharpens an image.
@@ -89,6 +94,7 @@ def sharpening(image: Image.Image) -> Image.Image:
 
     return sharpened_image
 
+
 def blurring(image: Image.Image) -> Image.Image:
     """
     Applies a blurring effect to an image.
@@ -102,6 +108,7 @@ def blurring(image: Image.Image) -> Image.Image:
     blurred_image = image.filter(ImageFilter.BLUR)
 
     return blurred_image
+
 
 def plot_augmentated_images(num_images: int) -> None:
     """

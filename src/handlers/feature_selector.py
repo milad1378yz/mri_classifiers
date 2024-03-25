@@ -1,6 +1,7 @@
 from sklearn.feature_selection import SelectKBest, f_classif
 from numpy import ndarray
 
+
 class FeatureSelector:
     """
     A class for feature selection using the SelectKBest method from scikit-learn.
@@ -12,7 +13,7 @@ class FeatureSelector:
     - k (int): The number of top features to select.
     - k_best (SelectKBest): An instance of SelectKBest from scikit-learn.
     """
-    
+
     def __init__(self, k: int) -> None:
         """
         Initializes the FeatureSelector with the specified number of features to select.

@@ -80,7 +80,6 @@ def compute_image_metrics(
 
 
 def main(args: argparse.Namespace):
-
     random.seed(0)  # Ensure reproducibility
 
     true_image_tensor = load_and_process_images(
