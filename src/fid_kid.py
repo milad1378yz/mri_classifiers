@@ -1,53 +1,102 @@
-import torch
-from torchmetrics.image.fid import FrechetInceptionDistance
-import numpy as np
-import random
-from torchmetrics.image.kid import KernelInceptionDistance
+import argparse
 import os
+import random
+import numpy as np
+import torch
 from PIL import Image
 from torchvision import transforms
+from torchmetrics.image.fid import FrechetInceptionDistance
+from torchmetrics.image.kid import KernelInceptionDistance
+from typing import Tuple
 
 
-def image_loader(directory_path, sample_size=100):
-    images = []
-    filenames = os.listdir(directory_path)
-    random.shuffle(filenames)
-    for filename in filenames[:sample_size]:
-        image = Image.open(os.path.join(directory_path, filename))
-        image = image.convert("RGB")
-        image = transforms.Resize((128, 128))(image)
-        image = np.array(image)
-        images.append(image)
-    images = np.array(images)
-
-    images = np.transpose(images, (0, 3, 1, 2))
-    image_tensor = torch.tensor(images, dtype=torch.uint8)
-    print(images.shape)
-    return image_tensor
-
-
-# set the seed of random number generator
-random.seed(0)
-for filename in os.listdir(
-    "/scratch/st-sdena-1/miladyz/mri_classifiers/data/generated"
-):
-    print(filename)
-    data_dir = (
-        "/scratch/st-sdena-1/miladyz/mri_classifiers/data/Alzheimer_MRI_4_classes_dataset/"
-        + filename
+def parse_command_line_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Calculate FID and KID metrics for images."
     )
-    data1 = image_loader(data_dir, sample_size=100)
-    data_dir = "/scratch/st-sdena-1/miladyz/mri_classifiers/data/generated/" + filename
-    data2 = image_loader(data_dir, sample_size=1000)
+    parser.add_argument(
+        "--true_images_dir",
+        type=str,
+        default="data/Alzheimer_MRI_4_classes_dataset",
+        help="Directory path of true images.",
+    )
+    parser.add_argument(
+        "--generated_images_dir",
+        type=str,
+        default="data/generated",
+        help="Directory path of generated images.",
+    )
+    return parser.parse_args()
 
-    fid = FrechetInceptionDistance(feature=64)
-    fid.update(data1, real=True)
-    fid.update(data2, real=False)
-    print("FID:", fid.compute())
 
-    kid = KernelInceptionDistance(subset_size=50)
+def load_and_process_images(
+    image_directory: str, number_of_images: int = 100
+) -> torch.Tensor:
+    """Loads images from a specified directory, processes, and converts them into a PyTorch tensor.
 
-    kid.update(data1, real=True)
-    kid.update(data2, real=False)
-    kid_mean, kid_std = kid.compute()
-    print("KID", (kid_mean, kid_std))
+    Args:
+        image_directory (str): The directory containing the images to load.
+        number_of_images (int): The number of images to load and process.
+
+    Returns:
+        torch.Tensor: A tensor containing the processed images.
+    """
+    processed_images = []
+    image_filenames = random.sample(os.listdir(image_directory), number_of_images)
+    for filename in image_filenames:
+        with Image.open(os.path.join(image_directory, filename)) as image:
+            resized_image = transforms.Resize((128, 128))(image.convert("RGB"))
+            processed_images.append(np.array(resized_image))
+    processed_images_array = np.array(processed_images).transpose(
+        (0, 3, 1, 2)
+    )  # Rearrange axis for PyTorch compatibility
+    images_tensor = torch.tensor(processed_images_array, dtype=torch.uint8)
+    return images_tensor
+
+
+def compute_image_metrics(
+    true_images: torch.Tensor, generated_images: torch.Tensor
+) -> Tuple[float, Tuple[float, float]]:
+    """Calculates FID and KID metrics to compare sets of true and generated images.
+
+    Args:
+        true_images (torch.Tensor): Tensor containing true images.
+        generated_images (torch.Tensor): Tensor containing generated images.
+
+    Returns:
+        Tuple[float, Tuple[float, float]]: FID score and KID mean and std deviation.
+    """
+    fid_metric = FrechetInceptionDistance(feature=64)
+    fid_metric.update(true_images, real=True)
+    fid_metric.update(generated_images, real=False)
+    fid_score = fid_metric.compute()
+
+    kid_metric = KernelInceptionDistance(subset_size=50)
+    kid_metric.update(true_images, real=True)
+    kid_metric.update(generated_images, real=False)
+    kid_mean, kid_std = kid_metric.compute()
+
+    return fid_score, (kid_mean, kid_std)
+
+
+def main():
+    args = parse_command_line_arguments()
+
+    random.seed(0)  # Ensure reproducibility
+
+    true_image_tensor = load_and_process_images(
+        args.true_images_dir, number_of_images=100
+    )
+    generated_image_tensor = load_and_process_images(
+        args.generated_images_dir, number_of_images=1000
+    )
+
+    fid_score, (kid_mean, kid_std) = compute_image_metrics(
+        true_image_tensor, generated_image_tensor
+    )
+    print(f"FID: {fid_score}")
+    print(f"KID: Mean = {kid_mean}, Std = {kid_std}")
+
+
+if __name__ == "__main__":
+    main()

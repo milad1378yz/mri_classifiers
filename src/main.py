@@ -2,29 +2,32 @@ import os
 from PIL import Image
 import numpy as np
 import random
+import argparse
+from typing import List, Dict, Tuple
 
 from handlers.parser import parse_config
-from handlers.augmentation import augment_data, plot_augmentated_images
-from handlers.augmentation import generate_data
+from handlers.augmentation import augment_data, plot_augmentated_images, generate_data
 
 
-def gather_data(classes: list, data_path: str, do_cnn: bool) -> dict:
+def gather_dataset_images(
+    classes: List[str], dataset_path: str, for_cnn: bool
+) -> Dict[str, List[Image.Image]]:
     """
-    Gather data from the specified data path for each class.
+    Collects and processes images from the dataset for each specified class.
 
     Args:
-        classes (list): List of class names.
-        data_path (str): Path to the data folder.
-        do_cnn (bool): Flag indicating whether to convert images to RGB for CNN.
+        classes: List of class names.
+        dataset_path: Root path to the dataset.
+        for_cnn: Whether to convert images for CNN input (RGB).
 
     Returns:
-        dict: A dictionary containing the class names as keys and a list of images as values.
+        A dictionary with class names as keys and a list of image data as values.
     """
     folder_dict = {}
 
     for i, class_mri in enumerate(classes):
         # Get the list of files in the folder
-        file_list = os.listdir(os.path.join(data_path, class_mri))
+        file_list = os.listdir(os.path.join(dataset_path, class_mri))
         folder_dict[class_mri] = []
         # Filter the list to include only JPG files
         jpg_files = [file for file in file_list if file.endswith(".jpg")]
@@ -33,8 +36,8 @@ def gather_data(classes: list, data_path: str, do_cnn: bool) -> dict:
         random.shuffle(jpg_files)
 
         for file in jpg_files:
-            image_path = os.path.join(data_path, class_mri, file)
-            if do_cnn:
+            image_path = os.path.join(dataset_path, class_mri, file)
+            if for_cnn:
                 image = Image.open(image_path).convert("RGB")
                 folder_dict[class_mri].append(image)  # Add original image
             else:
@@ -44,97 +47,137 @@ def gather_data(classes: list, data_path: str, do_cnn: bool) -> dict:
     return folder_dict
 
 
-def convert_to_array(folder_dict, classes):
-    # Split each class into train, validation, and test
-    train_dict = {}
-    val_dict = {}
-    for class_mri in classes:
-        images = folder_dict[class_mri]
-        num_images = len(images)
-        num_val = int(num_images * 0.1)  # 10% of data for validation
-
-        train_dict[class_mri] = images[: num_images - num_val]
-        val_dict[class_mri] = images[num_images - num_val :]
-    # flatten images
-    for class_mri in classes:
-        for i in range(len(train_dict[class_mri])):
-            train_dict[class_mri][i] = train_dict[class_mri][i].flatten()
-        for i in range(len(val_dict[class_mri])):
-            val_dict[class_mri][i] = val_dict[class_mri][i].flatten()
-    # convert train data to array
-    train_data = []
-    train_label = []
-    for i, class_mri in enumerate(classes):
-        for image in train_dict[class_mri]:
-            train_data.append(image)
-            train_label.append(i)
-
-    train_data = np.array(train_data)
-    train_label = np.array(train_label)
-
-    # convert validation data to array
-    val_data = []
-    val_label = []
-    for i, class_mri in enumerate(classes):
-        for image in val_dict[class_mri]:
-            val_data.append(image)
-            val_label.append(i)
-    val_data = np.array(val_data)
-    val_label = np.array(val_label)
-
-    # shuffle train data and validation data
-    combined_data_train = np.column_stack((train_data, train_label))
-    combined_data_val = np.column_stack((val_data, val_label))
-
-    # Shuffle the combined data along the first axis
-    np.random.shuffle(combined_data_train)
-    np.random.shuffle(combined_data_val)
-
-    # Split the shuffled data back into separate arrays
-    train_data = combined_data_train[:, :-1]
-    train_label = combined_data_train[:, -1]
-    val_data = combined_data_val[:, :-1]
-    val_label = combined_data_val[:, -1]
-
-    print("data_train shape is:", train_data.shape)
-    print("data_val shape is:", val_data.shape)
-    print("label_train shape is:", train_label.shape)
-    print("label_val shape is:", val_label.shape)
-    return train_data, train_label, val_data, val_label
-
-
-def convert_to_array_cnn(folder_dict: dict, classes: list) -> tuple:
+def split_data_for_training(
+    images: List[np.ndarray], validation_ratio: float = 0.1
+) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     """
-    Convert the data in folder_dict to arrays for CNN training.
+    Splits the images into training and validation sets based on the specified ratio.
 
     Args:
-        folder_dict (dict): A dictionary containing the data for each class.
-                            Each class should have its data as a list of images,
-                            where each image is a numpy array of shape (height, width, channels).
-        classes (list): A list of class names.
+        images (List[np.ndarray]): List of image arrays.
+        validation_ratio (float): The proportion of images to be used for validation.
 
     Returns:
-        tuple: A tuple containing the train_data, train_label, val_data, and val_label arrays.
+        Tuple[List[np.ndarray], List[np.ndarray]]: Two lists containing training and validation images, respectively.
     """
-    train_data = []
-    train_label = []
-    val_data = []
-    val_label = []
+    num_val = int(len(images) * validation_ratio)
+    return images[:-num_val], images[-num_val:]
 
-    for class_index, class_name in enumerate(classes):
-        data = folder_dict[class_name]
-        random.shuffle(data)
-        num_train = int(len(data) * 0.9)
 
-        for i, data_shown in enumerate(data):
-            if i < num_train:
-                train_data.append(data_shown)
-                train_label.append(class_index)
-            else:
-                val_data.append(data_shown)
-                val_label.append(class_index)
+def prepare_data_arrays(
+    image_data: Dict[str, List[np.ndarray]], classes: List[str]
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Prepares flattened arrays for training and validation data and their corresponding labels.
+
+    Args:
+        image_data (Dict[str, List[np.ndarray]]): Dictionary with class names as keys and list of images as values.
+        classes (List[str]): List of class names.
+
+    Returns:
+        Tuple containing arrays for training data, training labels, validation data, and validation labels.
+    """
+    train_images, train_labels, val_images, val_labels = [], [], [], []
+
+    for idx, class_name in enumerate(classes):
+        train, val = split_data_for_training(image_data[class_name])
+        train_images.extend([image.flatten() for image in train])
+        val_images.extend([image.flatten() for image in val])
+        train_labels.extend([idx] * len(train))
+        val_labels.extend([idx] * len(val))
+
+    # Convert to numpy arrays
+    train_data, train_label = np.array(train_images), np.array(train_labels)
+    val_data, val_label = np.array(val_images), np.array(val_labels)
+
+    # Shuffle the training and validation datasets
+    train_data, train_label = shuffle_data(train_data, train_label)
+    val_data, val_label = shuffle_data(val_data, val_label)
+
+    print_data_shapes(train_data, val_data, train_label, val_label)
 
     return train_data, train_label, val_data, val_label
+
+
+def shuffle_data(data: np.ndarray, labels: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Shuffles the data and labels in unison.
+
+    Args:
+        data (np.ndarray): Data to be shuffled.
+        labels (np.ndarray): Corresponding labels to be shuffled.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Shuffled data and labels.
+    """
+    assert len(data) == len(labels)
+    p = np.random.permutation(len(data))
+    return data[p], labels[p]
+
+
+def print_data_shapes(
+    train_data: np.ndarray,
+    val_data: np.ndarray,
+    train_label: np.ndarray,
+    val_label: np.ndarray,
+):
+    """
+    Prints the shapes of training and validation data and labels.
+
+    Args:
+        train_data (np.ndarray): Training data array.
+        val_data (np.ndarray): Validation data array.
+        train_label (np.ndarray): Training labels array.
+        val_label (np.ndarray): Validation labels array.
+    """
+    print(f"data_train shape is: {train_data.shape}")
+    print(f"data_val shape is: {val_data.shape}")
+    print(f"label_train shape is: {train_label.shape}")
+    print(f"label_val shape is: {val_label.shape}")
+
+
+def prepare_data_for_cnn(
+    image_collections: Dict[str, List[np.ndarray]], class_labels: List[str]
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Prepares data for CNN training by organizing images into training and validation sets, along with their labels.
+
+    Args:
+        image_collections (Dict[str, List[np.ndarray]]): A dictionary where keys are class names and values are lists of image arrays.
+        class_labels (List[str]): A list of class names corresponding to the keys in `image_collections`.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Four numpy arrays representing training data, training labels, validation data, and validation labels, respectively.
+    """
+    training_images, training_labels, validation_images, validation_labels = (
+        [],
+        [],
+        [],
+        [],
+    )
+
+    for class_index, class_name in enumerate(class_labels):
+        images = image_collections[class_name]
+        random.shuffle(images)
+        split_index = int(
+            len(images) * 0.9
+        )  # Split index for 90% training and 10% validation
+
+        for i, image in enumerate(images):
+            if i < split_index:
+                training_images.append(image)
+                training_labels.append(class_index)
+            else:
+                validation_images.append(image)
+                validation_labels.append(class_index)
+
+    # Convert lists to numpy arrays
+    training_data = np.array(training_images, dtype=np.float32)
+    training_labels = np.array(training_labels, dtype=np.int32)
+    validation_data = np.array(validation_images, dtype=np.float32)
+    validation_labels = np.array(validation_labels, dtype=np.int32)
+
+    return training_data, training_labels, validation_data, validation_labels
 
 
 def main(args):
@@ -145,42 +188,41 @@ def main(args):
         "ModerateDemented",
     ]
     data_path = args.data_path
-    print("gather data")
-    folder_dict = gather_data(classes, data_path, args.do_cnn)
-    print("gather data done")
-    # shapes = folder_dict[list(folder_dict.keys())[0]][0].shape
-    # print(shapes)
+    print("Gathering data...")
+    folder_dict = gather_dataset_images(classes, data_path, args.do_cnn)
+    print("Data gathered.")
+
     if args.do_augmentation:
-        print("start augmentation")
+        print("Starting augmentation...")
         if args.do_generation:
-            print("start generation")
+            print("Starting data generation...")
             balanced_folder_dict = generate_data(folder_dict, 5000, args.do_cnn)
-            print("generation done")
+            print("Data generation completed.")
         else:
             balanced_folder_dict = augment_data(folder_dict, args.do_cnn)
-            print("augemented data is ready")
+            print("Augmented data is ready.")
             plot_augmentated_images(5)
-            print("plot augmentated image is done")
+            print("Augmentation images plotted.")
 
         if args.do_cnn:
-            train_data, train_label, val_data, val_label = convert_to_array_cnn(
+            train_data, train_label, val_data, val_label = prepare_data_for_cnn(
                 balanced_folder_dict, classes
             )
         else:
-            train_data, train_label, val_data, val_label = convert_to_array(
+            train_data, train_label, val_data, val_label = prepare_data_arrays(
                 balanced_folder_dict, classes
             )
     else:
         if args.do_cnn:
-            train_data, train_label, val_data, val_label = convert_to_array_cnn(
+            train_data, train_label, val_data, val_label = prepare_data_for_cnn(
                 folder_dict, classes
             )
         else:
-            train_data, train_label, val_data, val_label = convert_to_array(
+            train_data, train_label, val_data, val_label = prepare_data_arrays(
                 folder_dict, classes
             )
 
-    print("train data and validation data is ready")
+    print("Train and validation data are ready.")
 
     # convert labels to binary
     if args.convert_binary:

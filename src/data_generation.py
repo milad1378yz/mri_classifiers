@@ -49,7 +49,7 @@ if __name__ == "__main__":
     ]
     number_of_images = args.number_of_images
     generate_data(classes, number_of_images)
-    ## save the augmented iamges as jpg
+    ## save the augmented images as jpg
     # for class_name,images in augmented_folder_dict.items():
     #     # make the directory if not exist
     #     os.makedirs(f"data/generated/{class_name}",exist_ok=True)
