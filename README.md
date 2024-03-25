@@ -28,7 +28,7 @@ Training individual models for each class stores them in the `diffusion_models` 
 ### Generating Data Using DDPMs
 To generate augmented data:
 ```bash
-python data_generation.py --number_of_images 5000
+python src/data_generation.py --number_of_images 5000
 ```
 This creates a `generated` folder in the `data` directory, containing 5000 images for each class.
 
