@@ -46,3 +46,22 @@ To run the project and store results in the `result` folder, use:
 ```bash
 python src/main.py
 ```
+
+
+## Docker
+If you want to use docker automatically:
+* to build: 
+```bash
+cd docker
+docker build -t env_image .
+```
+* to run: 
+```bash
+cd ..
+docker run -d -it --name container_runner -v .:/app env_image tail -f /dev/null
+docker exec -it container_runner bash
+pip install -r requirements.txt
+```
+Now in the docker container you can do the following things:
+
+- The rest is the same as above.
